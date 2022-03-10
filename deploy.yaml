@@ -1,0 +1,99 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: custom-default-backend
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: custom-default-backend-role-binding
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: custom-default-backend
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  custom-default-backend
+  namespace: kube-system
+  labels:
+    app:  custom-default-backend
+spec:
+  selector:
+    matchLabels:
+      app: custom-default-backend
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kv: 0.0.1
+      labels:
+        app: custom-default-backend
+        version: 0.0.1
+    spec:
+      serviceAccountName: custom-default-backend
+      containers:
+      - name:  custom-default-backend
+        image:  ysicing/custom-default-backend:0.0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 65001
+          name: http
+          protocol: TCP
+        env:
+        - name: ENVTYPE
+          value: "pre"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        livenessProbe:
+          tcpSocket:
+            port: 65001
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 65001
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: custom-default-backend
+  namespace: kube-system
+spec:
+  selector:
+    app: custom-default-backend
+  type: ClusterIP
+  ports:
+  - name: custom-default-backend
+    protocol: TCP
+    port: 65001
+    targetPort: 65001
