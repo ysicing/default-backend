@@ -14,11 +14,15 @@ import (
 	"github.com/ergoapi/zlog"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/client-go/informers"
+
+	"github.com/ysicing/default-backend/pkg/k8s"
 )
 
 func Index(c *gin.Context) {
 	host := c.Request.Host
 	ip := exgin.RealIP(c)
+	
 	exgin.GinsData(c, map[string]interface{}{
 		"host": host,
 		"ip":   ip,
@@ -31,6 +35,11 @@ func Serve(ctx context.Context) error {
 	g.Use(exgin.ExLog())
 	g.Use(exgin.ExRecovery())
 	g.GET("/", Index)
+	g.GET("/healthz", func(c *gin.Context) {
+		exgin.GinsData(c, map[string]string{
+			"healthz": "healthz",
+		}, nil)
+	})
 	g.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	g.GET("/rv", func(c *gin.Context) {
 		v := version.Get()
@@ -48,12 +57,17 @@ func Serve(ctx context.Context) error {
 		msg := fmt.Sprintf("not found: %v", c.Request.URL.Path)
 		exgin.GinsAbortWithCode(c, 404, msg)
 	})
+	stopChan := make(chan struct{})
+	factory := informers.NewSharedInformerFactory(k8s.Client, time.Minute)
+	controller := k8s.NewControlller(factory)
+	controller.Run(stopChan)
 	addr := "0.0.0.0:65001"
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: g,
 	}
 	go func() {
+		defer close(stopChan)
 		<-ctx.Done()
 		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
 		defer cancel()
@@ -67,5 +81,8 @@ func Serve(ctx context.Context) error {
 		zlog.Error("Failed to start http server, error: %s", err)
 		return err
 	}
+
+	<-stopChan
+
 	return nil
 }

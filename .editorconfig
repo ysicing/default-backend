@@ -7,9 +7,10 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-indent_style = tab
+# 锁进风格 tap or space
+indent_style = space
+# 缩进字符数
 indent_size = 2
-tab_width = 2
 
 [*.go]
 indent_style = tab
@@ -20,12 +21,13 @@ trim_trailing_whitespace = false
 [Makefile]
 indent_style = tab
 
-[*.yml]
-indent_style = tab
-
-[*.yaml]
-indent_style = tab
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
 
 [*.json]
+indent_style = tab
+
+[*.{js,jsx,vue}]
 indent_style = tab
 
