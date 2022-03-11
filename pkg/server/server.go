@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"time"
@@ -17,12 +18,21 @@ import (
 	"k8s.io/client-go/informers"
 
 	"github.com/ysicing/default-backend/pkg/k8s"
+	"github.com/ysicing/default-backend/pkg/templates"
 )
 
 func Index(c *gin.Context) {
 	host := c.Request.Host
 	ip := exgin.RealIP(c)
-	
+	s := k8s.StartDeploy(host)
+	if s == "503" {
+		c.HTML(200, "503.html", gin.H{})
+		return
+	}
+	if s == "200" {
+		c.HTML(200, "404.html", gin.H{})
+		return
+	}
 	exgin.GinsData(c, map[string]interface{}{
 		"host": host,
 		"ip":   ip,
@@ -30,10 +40,16 @@ func Index(c *gin.Context) {
 }
 
 func Serve(ctx context.Context) error {
+	stopChan := make(chan struct{})
+	factory := informers.NewSharedInformerFactory(k8s.Client, time.Minute)
+	controller := k8s.NewControlller(factory)
+	controller.Run(stopChan)
 	g := exgin.Init(environ.GetEnv("ENVTYPE", "prod") == "prod")
 	g.Use(exgin.ExCors())
 	g.Use(exgin.ExLog())
 	g.Use(exgin.ExRecovery())
+	tpls := template.Must(template.New("").ParseFS(templates.FS, "pages/*.html"))
+	g.SetHTMLTemplate(tpls)
 	g.GET("/", Index)
 	g.GET("/healthz", func(c *gin.Context) {
 		exgin.GinsData(c, map[string]string{
@@ -57,10 +73,6 @@ func Serve(ctx context.Context) error {
 		msg := fmt.Sprintf("not found: %v", c.Request.URL.Path)
 		exgin.GinsAbortWithCode(c, 404, msg)
 	})
-	stopChan := make(chan struct{})
-	factory := informers.NewSharedInformerFactory(k8s.Client, time.Minute)
-	controller := k8s.NewControlller(factory)
-	controller.Run(stopChan)
 	addr := "0.0.0.0:65001"
 	srv := &http.Server{
 		Addr:    addr,

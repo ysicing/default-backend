@@ -1,15 +1,9 @@
 package k8s
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/ergoapi/util/exmap"
-	"github.com/ergoapi/zlog"
 	"github.com/ysicing/default-backend/internal/kube"
-	"github.com/ergoapi/util/ptr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	appsinformer "k8s.io/client-go/informers/apps/v1"
 	ingressv1 "k8s.io/client-go/informers/networking/v1"
@@ -18,6 +12,7 @@ import (
 )
 
 var Client kubernetes.Interface
+var IngressInformer ingressv1.IngressInformer
 
 func init() {
 	var err error
@@ -46,58 +41,6 @@ func (c *Controlller) update(oldobj, newobj interface{}) {
 
 }
 
-type Meta struct {
-	Host      string
-	Name      string
-	Namespace string
-	Appid     string
-	Status    string
-}
-
-func (c *Controlller) GetIngress(host string) *Meta {
-	var m Meta
-	ings, _ := c.ingressInformer.Lister().List(labels.Everything())
-	for _, ing := range ings {
-		if ing.Name == host {
-			m.Host = host
-			m.Appid = exmap.GetLabelValue(ing.Labels, "k8s.easycorp.work/appid")
-			m.Name = exmap.GetLabelValue(ing.Labels, "k8s.easycorp.work/name")
-			m.Namespace = ing.Namespace
-			if len(m.Appid) == 0 {
-				m.Status = "404"
-			} else {
-				m.Status = "200"
-			}
-			return &m
-		}
-	}
-	m.Status = "404"
-	return &m
-}
-
-func (c *Controlller) StartDeploy(host string) string {
-	m := c.GetIngress(host)
-	if m.Status == "404" {
-		return m.Status
-	}
-	d, err := c.deploymentInformer.Lister().Deployments(m.Namespace).Get(m.Name)
-	if err != nil {
-		zlog.Error("get deployment: %v", err)
-		return "404"
-	}
-	if *d.Spec.Replicas > 0 {
-		return "200"
-	}
-	dg, _ := Client.AppsV1().Deployments(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
-	dg.Spec.Replicas = ptr.Int32Ptr(1)
-	_, err = Client.AppsV1().Deployments(m.Namespace).Update(context.TODO(), dg, metav1.UpdateOptions{})
-	if err != nil {
-		zlog.Error("update deployment: %v", err)
-		return "404"
-	}
-	return "200"
-}
-
 func (c *Controlller) Run(stopCh chan struct{}) error {
 	c.informerFactory.Start(stopCh)
 	if !cache.WaitForCacheSync(stopCh, c.ingressInformer.Informer().HasSynced) {
@@ -107,9 +50,10 @@ func (c *Controlller) Run(stopCh chan struct{}) error {
 }
 
 func NewControlller(i informers.SharedInformerFactory) *Controlller {
+	IngressInformer = i.Networking().V1().Ingresses()
 	c := &Controlller{
 		informerFactory:    i,
-		ingressInformer:    i.Networking().V1().Ingresses(),
+		ingressInformer:    IngressInformer,
 		deploymentInformer: i.Apps().V1().Deployments(),
 	}
 	c.ingressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

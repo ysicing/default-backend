@@ -39,15 +39,15 @@ spec:
   template:
     metadata:
       annotations:
-        kv: 0.0.2
+        kv: 0.0.4
       labels:
         app: custom-default-backend
-        version: 0.0.2
+        version: 0.0.4
     spec:
       serviceAccountName: custom-default-backend
       containers:
       - name:  custom-default-backend
-        image: ysicing/defaultbackend-v2:0.0.2
+        image: ysicing/defaultbackend-v2:0.0.4
         imagePullPolicy: Always
         ports:
         - containerPort: 65001
