@@ -25,12 +25,20 @@ func Index(c *gin.Context) {
 	host := c.Request.Host
 	ip := exgin.RealIP(c)
 	s := k8s.StartDeploy(host)
-	if s == "503" {
-		c.HTML(200, "503.html", gin.H{})
+	if s == k8s.NotExistCode {
+		c.HTML(200, "notexist.html", gin.H{
+			"host": host,
+		})
 		return
-	}
-	if s == "200" {
-		c.HTML(200, "404.html", gin.H{})
+	} else if s == k8s.ExistRunning {
+		c.HTML(200, "crash.html", gin.H{
+			"host": host,
+		})
+		return
+	} else if s == k8s.ExistStart {
+		c.HTML(200, "starting.html", gin.H{
+			"host": host,
+		})
 		return
 	}
 	exgin.GinsData(c, map[string]interface{}{
@@ -46,7 +54,7 @@ func Serve(ctx context.Context) error {
 	controller.Run(stopChan)
 	g := exgin.Init(environ.GetEnv("ENVTYPE", "prod") == "prod")
 	g.Use(exgin.ExCors())
-	g.Use(exgin.ExLog())
+	g.Use(exgin.ExLog("/healthz", "/metrics"))
 	g.Use(exgin.ExRecovery())
 	tpls := template.Must(template.New("").ParseFS(templates.FS, "pages/*.html"))
 	g.SetHTMLTemplate(tpls)
@@ -88,7 +96,7 @@ func Serve(ctx context.Context) error {
 		}
 		zlog.Info("server exited.")
 	}()
-	zlog.Info("http listen to %v, pid is %v", addr, os.Getpid())
+	zlog.Info("http listen to %v, pid is %v, version: %v", addr, os.Getpid(), version.GetShortString())
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		zlog.Error("Failed to start http server, error: %s", err)
 		return err

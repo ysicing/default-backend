@@ -1,0 +1,6 @@
+*.md
+dist
+.vscode
+.DS_Store
+*.yaml
+*.yml

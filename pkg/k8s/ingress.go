@@ -6,8 +6,16 @@ import (
 	"github.com/ergoapi/util/exmap"
 	"github.com/ergoapi/util/ptr"
 	"github.com/ergoapi/zlog"
+	"github.com/ysicing/default-backend/internal/cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+)
+
+var (
+	NotExistCode = 0
+	ExistRunning = 1
+	ExistStart   = 2
+	Exist        = 99
 )
 
 type Meta struct {
@@ -15,7 +23,7 @@ type Meta struct {
 	Name      string
 	Namespace string
 	Appid     string
-	Status    string
+	Status    int
 }
 
 func GetIngress(host string) *Meta {
@@ -29,35 +37,38 @@ func GetIngress(host string) *Meta {
 			m.Name = exmap.GetLabelValue(ing.Labels, "k8s.easycorp.work/name")
 			m.Namespace = ing.Namespace
 			if len(m.Appid) == 0 || len(m.Name) == 0 {
-				m.Status = "404"
+				m.Status = NotExistCode
 			} else {
-				m.Status = "200"
+				m.Status = Exist
 			}
 			return &m
 		}
 	}
-	m.Status = "404"
+	m.Status = NotExistCode
 	return &m
 }
 
-func StartDeploy(host string) string {
+func StartDeploy(host string) int {
 	m := GetIngress(host)
-	if m.Status == "404" {
+	if m.Status == NotExistCode {
 		return m.Status
 	}
-	zlog.Debug("check deploy: %s", host)
 	dg, err := Client.AppsV1().Deployments(m.Namespace).Get(context.TODO(), m.Name, metav1.GetOptions{})
 	if err != nil {
-		return "404"
+		return NotExistCode
 	}
-	if *dg.Spec.Replicas > 0 {
-		return "503"
+	replicas := *dg.Spec.Replicas
+	if replicas > 0 {
+		if cache.Check(host) {
+			return ExistStart
+		}
+		return ExistRunning
 	}
 	dg.Spec.Replicas = ptr.Int32Ptr(1)
 	_, err = Client.AppsV1().Deployments(m.Namespace).Update(context.TODO(), dg, metav1.UpdateOptions{})
 	if err != nil {
 		zlog.Error("update deployment: %v", err)
-		return "404"
 	}
-	return "200"
+	cache.Set(host)
+	return ExistStart
 }
