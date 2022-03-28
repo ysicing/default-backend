@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ergoapi/exgin"
@@ -15,36 +16,58 @@ import (
 	"github.com/ergoapi/zlog"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/informers"
 
 	"github.com/ysicing/default-backend/pkg/k8s"
 	"github.com/ysicing/default-backend/pkg/templates"
 )
 
+func fake(c *gin.Context) bool {
+	ua := c.Request.UserAgent()
+	ua = strings.ToLower(ua)
+	path := c.Request.URL.Path
+	if strings.Contains(ua, "python") || strings.Contains(ua, "nss") || strings.Contains(ua, "nmap") || strings.Contains(ua, "censys") {
+		return true
+	}
+	if strings.Contains(ua, "bot") || strings.Contains(ua, "bytespider") || strings.Contains(ua, "android") || strings.Contains(ua, "windows") || strings.Contains(ua, "iphone") || strings.Contains(ua, "ipad") || strings.Contains(ua, "nss") || strings.Contains(ua, "nmap") || strings.Contains(ua, "censys") {
+		return true
+	}
+	if strings.Contains(path, ".php") || strings.Contains(path, "wp") {
+		return true
+	}
+	return false
+}
+
+func fakehost(host string) bool {
+	defaultHost := environ.GetEnv("DOMAIN_SUFFIX", "ysicing.net")
+	return !strings.HasSuffix(host, defaultHost)
+}
+
 func Index(c *gin.Context) {
 	host := c.Request.Host
 	ip := exgin.RealIP(c)
-	s := k8s.StartDeploy(host)
-	if s == k8s.NotExistCode {
-		c.HTML(200, "notexist.html", gin.H{
+	if len(validation.IsDNS1123Subdomain(host)) != 0 {
+		c.HTML(403, "ip.html", gin.H{
 			"host": host,
-		})
-		return
-	} else if s == k8s.ExistRunning {
-		c.HTML(200, "crash.html", gin.H{
-			"host": host,
-		})
-		return
-	} else if s == k8s.ExistStart {
-		c.HTML(200, "starting.html", gin.H{
-			"host": host,
+			"ip":   ip,
 		})
 		return
 	}
-	exgin.GinsData(c, map[string]interface{}{
+
+	s := k8s.StartDeploy(host)
+	if fake(c) || fakehost(host) || s == k8s.NotExistCode {
+		c.HTML(403, "4xx.html", gin.H{
+			"host": host,
+			"ip":   ip,
+		})
+		return
+	}
+
+	c.HTML(200, "5xx.html", gin.H{
 		"host": host,
 		"ip":   ip,
-	}, nil)
+	})
 }
 
 func Serve(ctx context.Context) error {
@@ -77,10 +100,7 @@ func Serve(ctx context.Context) error {
 		msg := fmt.Sprintf("not found: %v", c.Request.Method)
 		exgin.GinsAbortWithCode(c, 404, msg)
 	})
-	g.NoRoute(func(c *gin.Context) {
-		msg := fmt.Sprintf("not found: %v", c.Request.URL.Path)
-		exgin.GinsAbortWithCode(c, 404, msg)
-	})
+	g.NoRoute(Index)
 	addr := "0.0.0.0:65001"
 	srv := &http.Server{
 		Addr:    addr,

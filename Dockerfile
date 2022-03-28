@@ -1,8 +1,16 @@
 FROM ysicing/god AS god
 
-COPY . /go/src
-
 WORKDIR /go/src
+
+ENV GOPROXY=https://goproxy.cn,direct
+
+COPY go.mod go.mod
+
+COPY go.sum go.sum
+
+RUN go mod download
+
+COPY . .
 
 RUN make build
 

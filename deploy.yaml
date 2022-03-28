@@ -39,15 +39,15 @@ spec:
   template:
     metadata:
       annotations:
-        kv: 0.1.1
+        kv: 0.2.0
       labels:
         app: custom-default-backend
-        version: 0.1.1
+        version: 0.2.0
     spec:
       serviceAccountName: custom-default-backend
       containers:
       - name:  custom-default-backend
-        image: ysicing/defaultbackend-v2:0.1.1
+        image: ysicing/defaultbackend-v2:0.2.0
         imagePullPolicy: Always
         ports:
         - containerPort: 65001
@@ -56,6 +56,8 @@ spec:
         env:
         - name: ENVTYPE
           value: "pre"
+        - name: DOMAIN_SUFFIX
+          value: "ysicing.net"
         resources:
           requests:
             cpu: 100m
