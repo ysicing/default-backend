@@ -12,7 +12,7 @@ import (
 func init() {
 	cfg := zlog.Config{
 		Simple:      true,
-		ServiceName: "kubetls",
+		ServiceName: "default-backend",
 	}
 	zlog.InitZlog(&cfg)
 }
