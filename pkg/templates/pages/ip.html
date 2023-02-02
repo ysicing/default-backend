@@ -93,15 +93,15 @@
         <div class="layui-row layui-col-space15">
         <div class="inline_div">
             <div class="layui-card">
-                <div class="layui-card-header">禁止使用IP{{ .Host }}访问</div>
+                <div class="layui-card-header">禁止使用IP({{ .ip }})访问<a href="https://{{ .host }}">{{ .host }}</a></div>
                 <div class="layui-card-body">
                     <div class="error_logo">
                         <h1>403</h1>
                     </div>
                     <div class="error_content">
                         <div class="error_content_word">
-                            <h2>抱歉, 该IP无法直接被访问...</h2>
-                            <p style="padding-top: 20px;font-size: 12px"> 请联系管理员获取相关的权限后再次尝试访问该页面<hr><br><br><br><br><br><br><br><br>
+                            <h2>抱歉, 该IP({{ .ip }})已被列入黑名单或无权限直接访问...</h2>
+                            <p style="padding-top: 20px;font-size: 12px"> 请联系管理员获取相关的权限后再次尝试访问该页面.<hr><br><br><br><br><br><br><br><br>
                             </p>
                         </div>
                     </div>

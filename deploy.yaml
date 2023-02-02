@@ -1,24 +1,4 @@
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: custom-default-backend
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: custom-default-backend-role-binding
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: custom-default-backend
-  namespace: kube-system
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -39,29 +19,23 @@ spec:
   template:
     metadata:
       annotations:
-        kv: 0.2.0
+        kv: 0.3.0
       labels:
         app: custom-default-backend
-        version: 0.2.0
+        version: 0.3.0
     spec:
-      serviceAccountName: custom-default-backend
       containers:
-      - name:  custom-default-backend
-        image: ysicing/defaultbackend-v2:0.2.0
+      - name: custom-default-backend
+        image: ysicing/defaultbackend:0.3.0
         imagePullPolicy: Always
         ports:
         - containerPort: 65001
           name: http
           protocol: TCP
-        env:
-        - name: ENVTYPE
-          value: "pre"
-        - name: DOMAIN_SUFFIX
-          value: "ysicing.net"
         resources:
           requests:
-            cpu: 100m
-            memory: 100Mi
+            cpu: 50m
+            memory: 50Mi
           limits:
             cpu: 100m
             memory: 100Mi

@@ -2,19 +2,17 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/ergoapi/zlog"
+	"github.com/sirupsen/logrus"
 	"github.com/ysicing/default-backend/pkg/server"
 )
 
 func init() {
-	cfg := zlog.Config{
-		Simple:      true,
-		ServiceName: "default-backend",
-	}
-	zlog.InitZlog(&cfg)
+	logrus.SetOutput(os.Stdout)
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func main() {
@@ -25,6 +23,6 @@ func main() {
 	}()
 
 	if err := server.Serve(ctx); err != nil {
-		zlog.Fatal("run serve: %v", err)
+		logrus.Fatalf("run serve: %v", err)
 	}
 }

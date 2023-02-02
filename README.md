@@ -1,7 +1,7 @@
 # default-backend
 
 ```bash
-docker pull ysicing/defaultbackend-v2
+docker pull ysicing/defaultbackend:0.3.0
 # 替换ingress default backend
 ```
 
