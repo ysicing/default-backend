@@ -9,7 +9,7 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD || echo "unknown")
 GIT_BRANCH := $(shell git branch -r --contains | head -1 | sed -E -e "s%(HEAD ->|origin|upstream)/?%%g" | xargs || echo "unknown")
 # GIT_VERSION := $(shell git describe --always --tags --abbrev=14 $(GIT_COMMIT)^{commit})
 APP_VERSION := ${BUILD_VERSION}-${BUILD_DATE}-${GIT_BRANCH}-${GIT_COMMIT}
-IMAGE           ?= ysicing/defaultbackend-v2
+IMAGE           ?= ysicing/defaultbackend
 
 LDFLAGS := "-w \
 	-X $(VERSION_PKG).gitVersion=$(APP_VERSION) \
@@ -51,15 +51,8 @@ build: ## 构建二进制
 	@CGO_ENABLED=1 GOARCH=amd64 go build -o dist/defaultbackend \
     				-ldflags ${LDFLAGS} cmd/default-backend.go
 
-docker-build: ## 构建镜像
-	docker build -t ${IMAGE}:${BUILD_VERSION} .
-	docker tag ${IMAGE}:${BUILD_VERSION} ${IMAGE}
-
-docker-push: ## 推送镜像
-	docker push ${IMAGE}
-	docker push ${IMAGE}:${BUILD_VERSION}
-
-docker: docker-build docker-push ## 构建镜像并推送
+docker: ## 构建镜像
+	docker buildx build --push --pull -t ${IMAGE}:${BUILD_VERSION} .
 
 .EXPORT_ALL_VARIABLES:
 

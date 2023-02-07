@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"net/http"
 	"os"
@@ -52,14 +51,8 @@ func Serve(ctx context.Context) error {
 			"version":   v.GitVersion,
 		}, nil)
 	})
-	g.NoMethod(func(c *gin.Context) {
-		msg := fmt.Sprintf("not found method: %v", c.Request.Method)
-		exgin.GinsAbortWithCode(c, 404, msg)
-	})
-	g.NoRoute(func(c *gin.Context) {
-		msg := fmt.Sprintf("not found route: %v", c.Request.URL.Path)
-		exgin.GinsAbortWithCode(c, 404, msg)
-	})
+	g.NoMethod(Index)
+	g.NoRoute(Index)
 	addr := "0.0.0.0:65001"
 	srv := &http.Server{
 		Addr:    addr,
