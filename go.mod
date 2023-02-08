@@ -3,7 +3,7 @@ module github.com/ysicing/default-backend
 go 1.19
 
 require (
-	github.com/ergoapi/util v0.3.5
+	github.com/ergoapi/util v0.3.7
 	github.com/gin-gonic/gin v1.8.2
 	github.com/sirupsen/logrus v1.9.0
 )
