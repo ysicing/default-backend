@@ -19,9 +19,11 @@ import (
 func Index(c *gin.Context) {
 	host := c.Request.Host
 	ip := exgin.RealIP(c)
-	c.HTML(403, "ip.html", gin.H{
+	rid, _ := c.Get("ex-trace-id")
+	c.HTML(403, "cf.html", gin.H{
 		"host": host,
 		"ip":   ip,
+		"rid":  rid,
 	})
 }
 

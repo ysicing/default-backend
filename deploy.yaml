@@ -10,7 +10,7 @@ spec:
   selector:
     matchLabels:
       app: custom-default-backend
-  replicas: 1
+  replicas: 2
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -19,14 +19,14 @@ spec:
   template:
     metadata:
       annotations:
-        kv: 0.3.2
+        kv: 0.4.0
       labels:
         app: custom-default-backend
-        version: 0.3.2
+        version: 0.4.0
     spec:
       containers:
       - name: custom-default-backend
-        image: ysicing/defaultbackend:0.3.2
+        image: ysicing/defaultbackend:0.4.0
         imagePullPolicy: Always
         ports:
         - containerPort: 65001

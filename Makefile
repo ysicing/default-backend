@@ -42,8 +42,6 @@ lint: ## lint code
 		echo "$$OUTPUT"; \
 	fi
 
-
-
 default: fmt lint ## fmt code
 
 build: ## 构建二进制
