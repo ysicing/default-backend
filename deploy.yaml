@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: custom-default-backend
-        image: ysicing/defaultbackend:0.4.1
+        image: ysicing/defaultbackend:0.4.2
         imagePullPolicy: Always
         ports:
         - containerPort: 65001
